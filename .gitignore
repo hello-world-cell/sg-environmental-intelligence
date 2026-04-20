@@ -1,0 +1,15 @@
+# Secrets
+.env
+
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Pipeline data (raw inputs and generated outputs)
+data/raw/
+data/processed/
+outputs/
