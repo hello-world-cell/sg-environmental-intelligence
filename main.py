@@ -3,10 +3,16 @@ Singapore Environmental Intelligence Pipeline
 Orchestrates the full ETL + quality + recommendation pipeline.
 """
 
+import os
+
 from src.extract import extract
 from src.transform import transform
 from src.quality import quality
 from src.recommend import recommend
+
+os.makedirs("outputs", exist_ok=True)
+os.makedirs("data/processed", exist_ok=True)
+os.makedirs("data/raw", exist_ok=True)
 
 
 def run_pipeline():

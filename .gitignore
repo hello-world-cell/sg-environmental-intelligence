@@ -9,7 +9,9 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Pipeline data (raw inputs and generated outputs)
-data/raw/
-data/processed/
-outputs/
+# Keep folder structure but ignore generated files
+outputs/*.csv
+data/raw/*.csv
+data/processed/*.csv
+data/curated/*.csv
+data/processed/*.json

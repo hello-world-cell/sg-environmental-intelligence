@@ -36,14 +36,32 @@ for _key, _default in [
 
 # ── Data loading ──────────────────────────────────────────────────────────────
 
+_METRICS_COLS = [
+    "region", "retrieved_at", "temperature_c", "humidity_pct", "rainfall_mm",
+    "wind_speed_kmh", "forecast_2hr", "wbgt_c", "heat_stress_level",
+    "psi_24h", "pm25_sub_index", "uv_index",
+]
+
+_RECS_COLS = [
+    "region", "status", "status_color",
+    "wear_and_bring", "food_and_drinks", "sports_and_activities", "ideal_for",
+]
+
+
 @st.cache_data(ttl=300)
 def load_metrics() -> pd.DataFrame:
-    return pd.read_csv("data/processed/processed_env_data.csv")
+    try:
+        return pd.read_csv("data/processed/processed_env_data.csv")
+    except FileNotFoundError:
+        return pd.DataFrame(columns=_METRICS_COLS)
 
 
 @st.cache_data(ttl=300)
 def load_recommendations() -> pd.DataFrame:
-    df = pd.read_csv("outputs/recommendations.csv")
+    try:
+        df = pd.read_csv("outputs/recommendations.csv")
+    except FileNotFoundError:
+        return pd.DataFrame(columns=_RECS_COLS)
     for col in ["wear_and_bring", "food_and_drinks", "sports_and_activities", "ideal_for"]:
         df[col] = df[col].apply(_parse_pipe_list)
     return df
@@ -217,12 +235,19 @@ def show_home():
         )
 
     metrics_df = load_metrics()
-    if not metrics_df.empty:
-        try:
-            ts = pd.to_datetime(metrics_df["retrieved_at"].iloc[0])
-            st.caption(f"Last updated: {ts.strftime('%d %b %Y, %H:%M')}")
-        except Exception:
-            pass
+
+    if metrics_df.empty:
+        st.markdown("---")
+        st.info(
+            "No data yet — click **Refresh Data** in the sidebar to fetch live conditions."
+        )
+        return
+
+    try:
+        ts = pd.to_datetime(metrics_df["retrieved_at"].iloc[0])
+        st.caption(f"Last updated: {ts.strftime('%d %b %Y, %H:%M')}")
+    except Exception:
+        pass
 
     st.markdown("---")
     st.markdown("#### Where are you?")
