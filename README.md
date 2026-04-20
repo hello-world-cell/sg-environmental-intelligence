@@ -1,34 +1,189 @@
-# Singapore Environmental Intelligence Pipeline
+# 🌏 Singapore Environmental Intelligence Pipeline
 
-An automated ETL pipeline that ingests, processes, and analyses Singapore environmental data to generate actionable intelligence recommendations.
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://sg-environmental-intelligence-i5ym9sfxd339cj3ebhk8x4.streamlit.app/)
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](YOUR_DEPLOYED_URL)
+> Real-time environmental monitoring across Singapore — built as a
+> production-style data engineering pipeline with AI-powered recommendations.
 
 ---
 
-## Deployment
+## 🔗 Live Demo
 
-**Live app:** [YOUR_DEPLOYED_URL](YOUR_DEPLOYED_URL)
+**[https://sg-environmental-intelligence-i5ym9sfxd339cj3ebhk8x4.streamlit.app/](https://sg-environmental-intelligence-i5ym9sfxd339cj3ebhk8x4.streamlit.app/)**
 
-### Run locally
+Select any region and town in Singapore to see live environmental
+conditions and AI-generated recommendations.
+
+---
+
+## 📌 Project Overview
+
+This project ingests 9 real-time environmental APIs from Singapore's
+national open data platform (data.gov.sg), processes them through a
+multi-layer data pipeline, and surfaces actionable recommendations
+through an interactive Streamlit dashboard.
+
+It was built to demonstrate end-to-end data engineering skills —
+from raw API ingestion to curated datasets to a production-deployed
+application.
+
+---
+
+## 🏗️ Pipeline Architecture
+
+---
+
+## 🌐 Data Sources
+
+All data is sourced from [data.gov.sg](https://data.gov.sg) —
+Singapore's national open data platform. No API key required.
+
+| Dataset | Endpoint | Frequency | Coverage |
+|---|---|---|---|
+| PSI | `/v2/real-time/api/psi` | Hourly | 5 regions |
+| PM2.5 | `/v2/real-time/api/pm25` | Hourly | 5 regions |
+| UV Index | `/v2/real-time/api/uv` | Hourly | Island-wide |
+| Rainfall | `/v2/real-time/api/rainfall` | 5 min | Station-level |
+| Air Temperature | `/v2/real-time/api/air-temperature` | 1 min | Station-level |
+| Relative Humidity | `/v2/real-time/api/relative-humidity` | 1 min | Station-level |
+| Wind Speed | `/v2/real-time/api/wind-speed` | 5 min | Station-level |
+| WBGT | `/v2/real-time/api/wbgt` | 15 min | Station-level |
+| 2-hr Forecast | `/v2/real-time/api/two-hr-forecast` | 30 min | Area-level |
+
+---
+
+## 🧠 Data Engineering Concepts Applied
+
+### 1. Modular Ingestion Layer
+Each API has its own dedicated extractor module in `src/extract/`.
+Every extractor returns a standardised DataFrame with columns:
+`region`, `timestamp`, `metric`, `value` — regardless of the
+source API's original schema. This separation of concerns means
+any extractor can be updated or replaced independently.
+
+### 2. Schema Standardisation
+APIs return data in different shapes — some are region-level
+(PSI, UV), others are station-level with lat/lon coordinates
+(rainfall, temperature, humidity, wind). Station-level data is
+mapped to regions using geographic bounding boxes, then
+aggregated (mean for continuous metrics, sum for rainfall).
+
+### 3. Data Quality Layer
+`src/quality/quality.py` runs automated checks on every pipeline
+execution:
+- Null value detection per column
+- Value range validation (e.g. UV Index must be 0–15)
+- Quality report saved as JSON for traceability
+
+### 4. Long-to-Wide Transformation
+Raw data arrives in long format (one row per metric per region).
+The transform layer pivots this into a wide curated table
+(one row per region, one column per metric) — the standard
+pattern for analytical datasets and feature engineering.
+
+### 5. Feature Engineering
+Derived features are added during transformation:
+- `is_raining` (boolean from rainfall_mm)
+- `heat_stress` classification from WBGT readings
+- `air_quality` category from PSI bands
+
+### 6. Town-to-Station Mapping
+Singapore has 25+ weather stations with precise lat/lon
+coordinates. `src/extract/locations.py` maps 25 towns to
+their nearest weather station using Euclidean distance,
+enabling town-level granularity from station-level data.
+
+### 7. Retry & Rate Limit Handling
+All API calls implement a retry mechanism — on a 429 (Too Many
+Requests) response, the extractor waits 5 seconds and retries
+once before failing gracefully. A 1-second delay between
+extractors prevents burst rate limiting.
+
+### 8. Separation of Pipeline Layers
+`main.py` orchestrates the pipeline in strict order:
+extract → quality → transform → recommend. Each layer receives
+the output of the previous one. This mirrors the medallion
+architecture pattern (raw → processed → curated).
+
+---
+
+## 🤖 AI Integration
+
+Recommendations are generated in two layers:
+
+1. **Rule-based engine** (`src/recommend/recommend.py`) —
+   deterministic rules based on metric thresholds, covering
+   wear & bring, food & drinks, sports, and ideal activities.
+
+2. **GPT-4o-mini summary** (`src/recommend/genai.py`) —
+   a conversational 3-4 sentence summary generated by OpenAI
+   using the live metric values as context. Provides a
+   human-readable narrative on top of the structured rules.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Language | Python 3.11 |
+| Data processing | pandas |
+| API calls | requests (with retry logic) |
+| Pipeline orchestration | Custom Python modules |
+| Data quality | Custom validation layer |
+| AI summaries | OpenAI GPT-4o-mini |
+| Dashboard | Streamlit |
+| Deployment | Streamlit Community Cloud |
+| Version control | Git + GitHub |
+| Dependency management | pip + virtualenv |
+
+---
+
+## 📁 Project Structure
+
+---
+
+## 🚀 Running Locally
 
 ```bash
-# 1. Clone the repo and create a virtual environment
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS / Linux
+# Clone the repo
+git clone https://github.com/hello-world-cell/sg-environmental-intelligence.git
+cd sg-environmental-intelligence
 
-# 2. Install dependencies
+# Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+source .venv/bin/activate  # Mac/Linux
+
+# Install dependencies
 pip install -r requirements.txt
 
-# 3. Add your OpenAI API key
-echo OPENAI_API_KEY=sk-... > .env
+# Add your OpenAI key
+echo "OPENAI_API_KEY=your_key_here" > .env
 
-# 4. Run the pipeline to generate initial data
+# Run the pipeline
 python main.py
 
-# 5. Launch the dashboard
+# Launch the dashboard
 streamlit run app.py
 ```
 
-The app auto-refreshes cached data every **5 minutes**. You can also trigger a manual refresh at any time using the **Refresh Data** button in the sidebar.
+---
+
+## 📄 Data Licence
+
+All environmental data is provided by the
+[National Environment Agency (NEA)](https://www.nea.gov.sg/)
+via [data.gov.sg](https://data.gov.sg) under the
+[Singapore Open Data Licence v1.0](https://data.gov.sg/open-data-licence).
+
+AI summaries are generated by GPT-4o-mini (OpenAI) and are
+for general guidance only — not a substitute for official
+NEA advisories.
+
+---
+
+## 👤 Author
+
+Built as a data engineering portfolio project.
+GitHub: [hello-world-cell](https://github.com/hello-world-cell)
