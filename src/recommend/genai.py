@@ -12,7 +12,13 @@ from openai import OpenAI, OpenAIError
 
 load_dotenv()
 
-_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+try:
+    import streamlit as st
+    api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+except Exception:
+    api_key = os.getenv("OPENAI_API_KEY")
+
+_client = OpenAI(api_key=api_key)
 
 _SYSTEM_PROMPT = (
     "You are a friendly Singapore weather assistant giving "
